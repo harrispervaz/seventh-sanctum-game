@@ -1150,6 +1150,89 @@
             background: linear-gradient(to bottom, transparent, #c8a800);
             animation: rainFall 1.5s linear infinite;
         }
+        
+        /* ---- ENHANCED FIELD EFFECT ANIMATIONS ---- */
+        
+        /* Assembly Line - drifting sparks */
+        @keyframes assemblySparkFloat {
+            0% { transform: translateY(0) scale(1); opacity: 0.8; }
+            100% { transform: translateY(-120px) translateX(30px) scale(0); opacity: 0; }
+        }
+        
+        /* Relay Node - beam travel */
+        @keyframes relayBeamTravel {
+            0% { left: -60px; opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { left: 110%; opacity: 0; }
+        }
+        
+        /* Kill Zone - rising embers */
+        @keyframes emberRise {
+            0% { transform: translateY(0) scale(1); opacity: 0.9; }
+            30% { transform: translateY(-60px) translateX(15px) scale(0.8); opacity: 0.7; }
+            60% { transform: translateY(-140px) translateX(-10px) scale(0.5); opacity: 0.4; }
+            100% { transform: translateY(-220px) translateX(20px) scale(0); opacity: 0; }
+        }
+        
+        /* Kill Zone - heat shimmer */
+        @keyframes heatShimmer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        /* Rustfields - sand swirl */
+        @keyframes sandSwirl {
+            0% { transform: scale(0.3) rotate(0deg); opacity: 0.5; }
+            50% { transform: scale(1.2) rotate(180deg); opacity: 0.3; }
+            100% { transform: scale(2) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Rustfields - haze breathing */
+        @keyframes hazeBreath {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        /* Lowlands Mist - fog layer drift */
+        @keyframes fogLayerDrift {
+            0% { transform: translateX(-20px); }
+            100% { transform: translateX(20px); }
+        }
+        
+        /* Lowlands Mist - toxic bubble */
+        @keyframes toxicBubbleRise {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { opacity: 0.5; }
+            80% { opacity: 0.3; }
+            100% { transform: translateY(-150px) scale(1.2); opacity: 0; }
+        }
+        
+        /* Blight Pools - ooze pool pulse */
+        @keyframes oozePoolPulse {
+            0%, 100% { opacity: 0.5; height: 20%; }
+            50% { opacity: 0.8; height: 25%; }
+        }
+        
+        /* Blight Pools - poison wisp */
+        @keyframes poisonWispRise {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            30% { opacity: 0.4; }
+            100% { transform: translateY(-120px) scale(1.5) translateX(20px); opacity: 0; }
+        }
+        
+        /* Rotfall Expanse - acid splash */
+        @keyframes acidSplash {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(3) translateY(-5px); opacity: 0; }
+        }
+        
+        /* Rotfall Expanse - withering leaf */
+        @keyframes leafWither {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.5; }
+            50% { transform: translateY(200px) rotate(180deg) translateX(40px); opacity: 0.4; }
+            100% { transform: translateY(500px) rotate(360deg) translateX(-20px); opacity: 0; }
+        }
     </style>
 </head>
 <body>

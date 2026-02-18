@@ -454,19 +454,18 @@ function renderField(player, field) {
     const hadCard = slot.querySelector('.card') !== null;
     const oldFieldId = hadCard ? slot.querySelector('.card')?.dataset?.cardId : null;
     
-    // Check if field was destroyed (had card, now no card)
+    const playerType = player === 'your' ? 'your' : 'opponent';
     const wasDestroyed = hadCard && !field;
     
     if (wasDestroyed) {
-        // Play destruction animation before clearing
         const cardToDestroy = slot.querySelector('.card');
         if (cardToDestroy) {
             cardToDestroy.classList.add('field-shattering');
             setTimeout(() => {
                 slot.innerHTML = '<small>FIELD</small>';
-                stopFieldEffects(player === 'your' ? 'your' : 'opponent');
+                stopFieldEffects(playerType);
             }, 600);
-            return; // Don't continue - let animation finish
+            return;
         }
     }
     
@@ -474,19 +473,17 @@ function renderField(player, field) {
     
     if (field) {
         const cardEl = createCardElement(field, false, true);
-        cardEl.dataset.cardId = field.id; // Track field ID
+        cardEl.dataset.cardId = field.id;
         
         slot.appendChild(cardEl);
         
-        // Start persistent effects for BOTH players
-        const playerType = player === 'your' ? 'your' : 'opponent';
-        if (field.id !== activeFieldEffects || playerType === 'opponent') {
+        // Start persistent effects - check against correct player's active effects
+        if (field.id !== activeFieldEffects[playerType]) {
             startFieldEffects(field.id, playerType);
         }
     } else {
         slot.innerHTML = '<small>FIELD</small>';
-        // No field - stop effects
-        stopFieldEffects(player === 'your' ? 'your' : 'opponent');
+        stopFieldEffects(playerType);
     }
 }
 
@@ -1939,7 +1936,10 @@ async function rotfallDestroyUnit(unitIndex) {
 // FIELD CARD ANIMATION SYSTEM
 // ============================================================
 
-let activeFieldEffects = null;
+// Track active field effects per player
+let activeFieldEffects = { your: null, opponent: null };
+// Store interval IDs so we can properly clear them
+let fieldIntervals = { your: [], opponent: [] };
 
 // Play field card slam animation
 function playFieldAnimation(fieldCardId, isReplacement = false) {
@@ -1950,7 +1950,6 @@ function playFieldAnimation(fieldCardId, isReplacement = false) {
             return;
         }
         
-        // Get field slot position BEFORE any changes
         const rect = fieldSlot.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -1961,14 +1960,12 @@ function playFieldAnimation(fieldCardId, isReplacement = false) {
             document.getElementById('game-container').classList.remove('screen-shake');
         }, 500);
         
-        // If replacing, shatter the old field first (DON'T remove it yet)
+        // If replacing, shatter old field first
         if (isReplacement) {
             const oldCard = fieldSlot.querySelector('.card');
             if (oldCard) {
                 oldCard.classList.add('field-shattering');
-                // Remove after animation completes
                 setTimeout(() => {
-                    // Only remove if it's still there and still has the class
                     if (oldCard.parentNode && oldCard.classList.contains('field-shattering')) {
                         oldCard.remove();
                     }
@@ -1976,20 +1973,31 @@ function playFieldAnimation(fieldCardId, isReplacement = false) {
             }
         }
         
-        // Wait for shatter if replacing, then do effects
         setTimeout(() => {
-            // Create ripples centered on field slot (3 rings)
+            // Triple ripple rings
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => createFieldRipple(centerX, centerY), i * 200);
             }
             
-            // Create sparks (8 directions)
-            for (let i = 0; i < 8; i++) {
-                const angle = (Math.PI * 2 / 8) * i;
-                createFieldSpark(centerX, centerY, angle);
+            // 12 directional sparks (more than before)
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                setTimeout(() => createFieldSpark(centerX, centerY, angle), Math.random() * 150);
             }
             
-            // Slam the new field card (wait a bit for DOM to update)
+            // Impact flash
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: radial-gradient(circle at ${centerX}px ${centerY}px, rgba(255,215,0,0.3), transparent 60%);
+                pointer-events: none; z-index: 55; opacity: 1;
+                transition: opacity 0.6s ease-out;
+            `;
+            document.body.appendChild(flash);
+            requestAnimationFrame(() => flash.style.opacity = '0');
+            setTimeout(() => flash.remove(), 700);
+            
+            // Slam the new field card
             setTimeout(() => {
                 const newCard = fieldSlot.querySelector('.card:not(.field-shattering)');
                 if (newCard) {
@@ -1997,7 +2005,6 @@ function playFieldAnimation(fieldCardId, isReplacement = false) {
                     setTimeout(() => newCard.classList.remove('field-slamming'), 700);
                 }
                 
-                // Start persistent effects for YOUR side
                 startFieldEffects(fieldCardId, 'your');
                 resolve();
             }, 200);
@@ -2018,171 +2025,420 @@ function createFieldRipple(x, y) {
 function createFieldSpark(x, y, angle) {
     const spark = document.createElement('div');
     spark.className = 'field-spark';
-    const distance = 200 + Math.random() * 100;
+    const distance = 150 + Math.random() * 150;
     const sparkX = Math.cos(angle) * distance;
     const sparkY = Math.sin(angle) * distance;
     spark.style.cssText = `
-        left: ${x}px;
-        top: ${y}px;
-        --spark-x: ${sparkX}px;
-        --spark-y: ${sparkY}px;
+        left: ${x}px; top: ${y}px;
+        --spark-x: ${sparkX}px; --spark-y: ${sparkY}px;
     `;
     document.body.appendChild(spark);
     setTimeout(() => spark.remove(), 800);
 }
 
-// Start persistent field effects
+// ---- START / STOP FIELD EFFECTS ----
+
 function startFieldEffects(fieldId, player = 'your') {
-    // Don't stop all effects - just manage this player's zone
+    // Clear any existing effects for this player first
+    stopFieldEffects(player);
+    
     const overlay = document.getElementById('field-effects-overlay');
     overlay.classList.add('active');
     
-    const zoneId = `field-effects-${player}`;
-    const zone = document.getElementById(zoneId);
+    const zone = document.getElementById(`field-effects-${player}`);
     if (!zone) return;
     
-    zone.innerHTML = ''; // Clear this player's zone only
+    zone.innerHTML = '';
     
     switch(fieldId) {
         case 'skyforge_assembly_line':
-            createAssemblyLineEffect(zone);
+            createAssemblyLineEffect(zone, player);
             break;
         case 'skyforge_relay_node':
-            createRelayNodeEffect(zone);
+            createRelayNodeEffect(zone, player);
             break;
         case 'skyforge_kill_zone':
-            createKillZoneEffect(zone);
+            createKillZoneEffect(zone, player);
             break;
         case 'skyforge_rustfields':
-            createRustfieldsEffect(zone);
+            createRustfieldsEffect(zone, player);
             break;
         case 'miasma_lowlands_mist':
-            createLowlandsMistEffect(zone);
+            createLowlandsMistEffect(zone, player);
             break;
         case 'miasma_blight_pools':
-            createBlightPoolsEffect(zone);
+            createBlightPoolsEffect(zone, player);
             break;
         case 'miasma_rotfall_expanse':
-            createRotfallExpanseEffect(zone);
+            createRotfallExpanseEffect(zone, player);
             break;
     }
     
-    if (player === 'your') {
-        activeFieldEffects = fieldId;
-    }
+    activeFieldEffects[player] = fieldId;
 }
 
 function stopFieldEffects(player = 'your') {
-    const zoneId = `field-effects-${player}`;
-    const zone = document.getElementById(zoneId);
+    // Clear all intervals for this player
+    if (fieldIntervals[player]) {
+        fieldIntervals[player].forEach(id => clearInterval(id));
+        fieldIntervals[player] = [];
+    }
+    
+    const zone = document.getElementById(`field-effects-${player}`);
     if (zone) {
         zone.innerHTML = '';
     }
     
-    // Check if BOTH zones are empty - if so, hide overlay
+    activeFieldEffects[player] = null;
+    
+    // Hide overlay if BOTH zones are empty
     const yourZone = document.getElementById('field-effects-your');
     const oppZone = document.getElementById('field-effects-opponent');
     if (yourZone && oppZone && !yourZone.innerHTML && !oppZone.innerHTML) {
-        const overlay = document.getElementById('field-effects-overlay');
-        overlay.classList.remove('active');
-    }
-    
-    if (player === 'your') {
-        activeFieldEffects = null;
+        document.getElementById('field-effects-overlay').classList.remove('active');
     }
 }
 
-// Assembly Line - floating gears
-function createAssemblyLineEffect(overlay) {
-    for (let i = 0; i < 8; i++) {
+// ---- INDIVIDUAL FIELD EFFECTS (ENHANCED) ----
+
+// ⚙️ Assembly Line - floating gears + occasional sparks + mechanical pulse
+function createAssemblyLineEffect(overlay, player) {
+    // Static floating gears (varied sizes)
+    const gearSymbols = ['⚙️', '🔩', '⚙️', '🔧', '⚙️'];
+    for (let i = 0; i < 10; i++) {
         const gear = document.createElement('div');
         gear.className = 'gear-particle';
-        gear.textContent = '⚙️';
+        gear.textContent = gearSymbols[i % gearSymbols.length];
+        const size = 18 + Math.random() * 16;
+        gear.style.fontSize = `${size}px`;
         gear.style.left = `${Math.random() * 90 + 5}%`;
         gear.style.top = `${Math.random() * 80 + 10}%`;
         gear.style.animationDelay = `${Math.random() * 4}s`;
+        gear.style.animationDuration = `${3 + Math.random() * 3}s`;
         overlay.appendChild(gear);
     }
+    
+    // Drifting spark particles (interval)
+    const sparkInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'skyforge_assembly_line') return;
+        const spark = document.createElement('div');
+        spark.style.cssText = `
+            position: absolute;
+            width: ${3 + Math.random() * 4}px;
+            height: ${3 + Math.random() * 4}px;
+            background: #ffa500;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #ffa500, 0 0 12px rgba(255,165,0,0.4);
+            left: ${Math.random() * 100}%;
+            bottom: ${Math.random() * 30}%;
+            opacity: 0.8;
+            pointer-events: none;
+            animation: assemblySparkFloat ${2 + Math.random() * 2}s ease-out forwards;
+        `;
+        overlay.appendChild(spark);
+        setTimeout(() => spark.remove(), 4000);
+    }, 400);
+    fieldIntervals[player].push(sparkInterval);
 }
 
-// Relay Node - twinkling lights
-function createRelayNodeEffect(overlay) {
-    for (let i = 0; i < 20; i++) {
+// 📡 Relay Node - twinkling lights + energy pulse beams
+function createRelayNodeEffect(overlay, player) {
+    // Twinkling relay lights (more of them, varied color)
+    for (let i = 0; i < 25; i++) {
         const light = document.createElement('div');
         light.className = 'relay-light';
+        const hue = 200 + Math.random() * 40; // Blue to cyan range
+        light.style.background = `hsl(${hue}, 80%, 60%)`;
+        light.style.boxShadow = `0 0 ${8 + Math.random() * 8}px hsl(${hue}, 80%, 60%)`;
+        light.style.width = `${4 + Math.random() * 5}px`;
+        light.style.height = light.style.width;
         light.style.left = `${Math.random() * 95 + 2.5}%`;
         light.style.top = `${Math.random() * 90 + 5}%`;
         light.style.animationDelay = `${Math.random() * 2}s`;
+        light.style.animationDuration = `${1.5 + Math.random() * 2}s`;
         overlay.appendChild(light);
     }
+    
+    // Pulse beams that travel across
+    const beamInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'skyforge_relay_node') return;
+        const beam = document.createElement('div');
+        const startY = Math.random() * 80 + 10;
+        beam.style.cssText = `
+            position: absolute;
+            width: 60px; height: 2px;
+            background: linear-gradient(90deg, transparent, #4a90e2, #80d0ff, #4a90e2, transparent);
+            box-shadow: 0 0 8px #4a90e2;
+            left: -60px;
+            top: ${startY}%;
+            opacity: 0.6;
+            pointer-events: none;
+            animation: relayBeamTravel ${3 + Math.random() * 2}s linear forwards;
+        `;
+        overlay.appendChild(beam);
+        setTimeout(() => beam.remove(), 6000);
+    }, 1500);
+    fieldIntervals[player].push(beamInterval);
 }
 
-// Kill Zone - fire particles
-function createKillZoneEffect(overlay) {
-    for (let i = 0; i < 12; i++) {
+// 🔥 Kill Zone - fire + rising embers + heat shimmer
+function createKillZoneEffect(overlay, player) {
+    // Base fire particles along the bottom
+    for (let i = 0; i < 15; i++) {
         const fire = document.createElement('div');
         fire.className = 'fire-particle';
+        const w = 15 + Math.random() * 20;
+        fire.style.width = `${w}px`;
+        fire.style.height = `${w * 1.5}px`;
         fire.style.left = `${Math.random() * 90 + 5}%`;
         fire.style.bottom = '0';
         fire.style.animationDelay = `${Math.random() * 1}s`;
+        fire.style.animationDuration = `${0.6 + Math.random() * 0.8}s`;
         overlay.appendChild(fire);
     }
+    
+    // Rising ember particles
+    const emberInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'skyforge_kill_zone') return;
+        const ember = document.createElement('div');
+        const size = 2 + Math.random() * 4;
+        ember.style.cssText = `
+            position: absolute;
+            width: ${size}px; height: ${size}px;
+            background: ${Math.random() > 0.5 ? '#ff4500' : '#ffa500'};
+            border-radius: 50%;
+            box-shadow: 0 0 ${size * 2}px ${Math.random() > 0.5 ? '#ff4500' : '#ff6b00'};
+            left: ${Math.random() * 100}%;
+            bottom: 0;
+            pointer-events: none;
+            animation: emberRise ${2 + Math.random() * 3}s ease-out forwards;
+        `;
+        overlay.appendChild(ember);
+        setTimeout(() => ember.remove(), 5000);
+    }, 200);
+    fieldIntervals[player].push(emberInterval);
+    
+    // Subtle heat shimmer overlay
+    const shimmer = document.createElement('div');
+    shimmer.style.cssText = `
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(0deg, rgba(255,69,0,0.08) 0%, transparent 60%);
+        animation: heatShimmer 3s ease-in-out infinite;
+        pointer-events: none;
+    `;
+    overlay.appendChild(shimmer);
 }
 
-// Rustfields - drifting sand
-function createRustfieldsEffect(overlay) {
-    setInterval(() => {
-        if (activeFieldEffects !== 'skyforge_rustfields') return;
+// 🏜️ Rustfields - sand swirls + dust drift + sepia haze
+function createRustfieldsEffect(overlay, player) {
+    // Sepia/dust haze at the bottom
+    const haze = document.createElement('div');
+    haze.style.cssText = `
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 40%;
+        background: linear-gradient(0deg, rgba(212,165,116,0.15) 0%, transparent 100%);
+        pointer-events: none;
+        animation: hazeBreath 5s ease-in-out infinite;
+    `;
+    overlay.appendChild(haze);
+    
+    // Drifting sand particles
+    const sandInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'skyforge_rustfields') return;
         const sand = document.createElement('div');
         sand.className = 'sand-particle';
-        sand.style.left = `${Math.random() * 100}%`;
+        const size = 2 + Math.random() * 4;
+        sand.style.width = `${size}px`;
+        sand.style.height = `${size}px`;
+        sand.style.left = `${-5}%`;
         sand.style.top = `${Math.random() * 100}%`;
+        sand.style.opacity = `${0.2 + Math.random() * 0.3}`;
+        sand.style.animationDuration = `${4 + Math.random() * 3}s`;
         overlay.appendChild(sand);
-        setTimeout(() => sand.remove(), 5000);
-    }, 300);
+        setTimeout(() => sand.remove(), 8000);
+    }, 250);
+    fieldIntervals[player].push(sandInterval);
+    
+    // Occasional sand swirl
+    const swirlInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'skyforge_rustfields') return;
+        const swirl = document.createElement('div');
+        swirl.style.cssText = `
+            position: absolute;
+            width: 40px; height: 40px;
+            border: 2px solid rgba(212,165,116,0.3);
+            border-radius: 50%;
+            left: ${Math.random() * 80 + 10}%;
+            top: ${Math.random() * 60 + 20}%;
+            pointer-events: none;
+            animation: sandSwirl 2s ease-out forwards;
+        `;
+        overlay.appendChild(swirl);
+        setTimeout(() => swirl.remove(), 2500);
+    }, 3000);
+    fieldIntervals[player].push(swirlInterval);
 }
 
-// Lowlands Mist - fog clouds
-function createLowlandsMistEffect(overlay) {
-    setInterval(() => {
-        if (activeFieldEffects !== 'miasma_lowlands_mist') return;
+// 🌫️ Lowlands Mist - creeping green/purple fog + toxic bubbles
+function createLowlandsMistEffect(overlay, player) {
+    // Multiple fog layers for depth
+    for (let layer = 0; layer < 3; layer++) {
+        const fogBase = document.createElement('div');
+        const opacity = 0.06 + layer * 0.03;
+        fogBase.style.cssText = `
+            position: absolute; bottom: ${layer * 15}%; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(0deg, rgba(100,60,120,${opacity}) 0%, transparent 100%);
+            pointer-events: none;
+            animation: fogLayerDrift ${8 + layer * 3}s ease-in-out infinite alternate;
+        `;
+        overlay.appendChild(fogBase);
+    }
+    
+    // Drifting fog clouds
+    const fogInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_lowlands_mist') return;
         const fog = document.createElement('div');
         fog.className = 'fog-particle';
-        fog.style.left = `${-100}px`;
+        const size = 80 + Math.random() * 60;
+        fog.style.width = `${size}px`;
+        fog.style.height = `${size}px`;
+        const green = Math.random() > 0.4;
+        fog.style.background = green
+            ? `radial-gradient(circle, rgba(100,180,100,0.25), transparent)`
+            : `radial-gradient(circle, rgba(139,71,137,0.3), transparent)`;
+        fog.style.left = `-${size}px`;
         fog.style.top = `${Math.random() * 80 + 10}%`;
-        fog.style.animationDuration = `${8 + Math.random() * 4}s`;
+        fog.style.animationDuration = `${8 + Math.random() * 5}s`;
         overlay.appendChild(fog);
-        setTimeout(() => fog.remove(), 12000);
-    }, 2000);
+        setTimeout(() => fog.remove(), 14000);
+    }, 1800);
+    fieldIntervals[player].push(fogInterval);
+    
+    // Occasional toxic bubble
+    const bubbleInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_lowlands_mist') return;
+        const bubble = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        bubble.style.cssText = `
+            position: absolute;
+            width: ${size}px; height: ${size}px;
+            border: 1px solid rgba(100,200,100,0.4);
+            border-radius: 50%;
+            background: rgba(100,200,100,0.1);
+            left: ${Math.random() * 90 + 5}%;
+            bottom: 0;
+            pointer-events: none;
+            animation: toxicBubbleRise ${3 + Math.random() * 3}s ease-out forwards;
+        `;
+        overlay.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 6500);
+    }, 2500);
+    fieldIntervals[player].push(bubbleInterval);
 }
 
-// Blight Pools - bubbling ooze
-function createBlightPoolsEffect(overlay) {
-    setInterval(() => {
-        if (activeFieldEffects !== 'miasma_blight_pools') return;
+// 🧪 Blight Pools - bubbling green ooze + drip + poison gas wisps
+function createBlightPoolsEffect(overlay, player) {
+    // Ooze pool base
+    const pool = document.createElement('div');
+    pool.style.cssText = `
+        position: absolute; bottom: 0; left: 5%; width: 90%; height: 20%;
+        background: linear-gradient(0deg, rgba(90,138,0,0.2) 0%, transparent 100%);
+        border-radius: 50% 50% 0 0;
+        pointer-events: none;
+        animation: oozePoolPulse 4s ease-in-out infinite;
+    `;
+    overlay.appendChild(pool);
+    
+    // Rising bubbles
+    const bubbleInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_blight_pools') return;
         const bubble = document.createElement('div');
         bubble.className = 'ooze-bubble';
-        bubble.style.left = `${Math.random() * 90 + 5}%`;
-        bubble.style.bottom = '0';
-        bubble.style.animationDelay = `${Math.random() * 3}s`;
+        const size = 8 + Math.random() * 12;
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        bubble.style.left = `${Math.random() * 80 + 10}%`;
+        bubble.style.bottom = '5%';
+        bubble.style.animationDuration = `${2 + Math.random() * 2}s`;
         overlay.appendChild(bubble);
-        setTimeout(() => bubble.remove(), 3000);
-    }, 500);
+        setTimeout(() => bubble.remove(), 4500);
+    }, 400);
+    fieldIntervals[player].push(bubbleInterval);
+    
+    // Poison gas wisps
+    const wispInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_blight_pools') return;
+        const wisp = document.createElement('div');
+        wisp.style.cssText = `
+            position: absolute;
+            width: ${30 + Math.random() * 30}px;
+            height: ${20 + Math.random() * 20}px;
+            background: radial-gradient(ellipse, rgba(90,138,0,0.2), transparent);
+            border-radius: 50%;
+            left: ${Math.random() * 80 + 10}%;
+            bottom: 15%;
+            pointer-events: none;
+            animation: poisonWispRise ${3 + Math.random() * 2}s ease-out forwards;
+        `;
+        overlay.appendChild(wisp);
+        setTimeout(() => wisp.remove(), 5500);
+    }, 1200);
+    fieldIntervals[player].push(wispInterval);
 }
 
-// Rotfall Expanse - acid rain
-function createRotfallExpanseEffect(overlay) {
-    setInterval(() => {
-        if (activeFieldEffects !== 'miasma_rotfall_expanse') return;
+// 🌧️ Rotfall Expanse - acid rain + splash + withering leaf particles
+function createRotfallExpanseEffect(overlay, player) {
+    // Acid rain drops
+    const rainInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_rotfall_expanse') return;
         const rain = document.createElement('div');
         rain.className = 'rain-drop';
         rain.style.left = `${Math.random() * 100}%`;
         rain.style.top = '-20px';
-        rain.style.animationDuration = `${1 + Math.random() * 0.5}s`;
-        rain.style.animationDelay = `${Math.random() * 0.5}s`;
+        rain.style.animationDuration = `${0.8 + Math.random() * 0.6}s`;
         overlay.appendChild(rain);
+        
+        // Splash on impact
+        const splashDelay = parseFloat(rain.style.animationDuration) * 900;
+        setTimeout(() => {
+            if (activeFieldEffects[player] !== 'miasma_rotfall_expanse') return;
+            const splash = document.createElement('div');
+            splash.style.cssText = `
+                position: absolute;
+                width: 6px; height: 3px;
+                background: rgba(200,168,0,0.5);
+                border-radius: 50%;
+                left: ${rain.style.left};
+                bottom: 5%;
+                pointer-events: none;
+                animation: acidSplash 0.4s ease-out forwards;
+            `;
+            overlay.appendChild(splash);
+            setTimeout(() => splash.remove(), 500);
+        }, splashDelay);
+        
         setTimeout(() => rain.remove(), 2000);
-    }, 100);
+    }, 80);
+    fieldIntervals[player].push(rainInterval);
+    
+    // Withering leaf particles
+    const leafInterval = setInterval(() => {
+        if (activeFieldEffects[player] !== 'miasma_rotfall_expanse') return;
+        const leaf = document.createElement('div');
+        leaf.style.cssText = `
+            position: absolute;
+            width: 8px; height: 6px;
+            background: ${Math.random() > 0.5 ? '#8a7a00' : '#6a5a00'};
+            border-radius: 0 50% 50% 50%;
+            left: ${Math.random() * 100}%;
+            top: -10px;
+            pointer-events: none;
+            opacity: 0.5;
+            animation: leafWither ${4 + Math.random() * 3}s ease-in forwards;
+        `;
+        overlay.appendChild(leaf);
+        setTimeout(() => leaf.remove(), 8000);
+    }, 800);
+    fieldIntervals[player].push(leafInterval);
 }
 
 // Shatter animation for destroyed field
@@ -2195,9 +2451,9 @@ function playFieldShatterAnimation() {
         card.classList.add('field-shattering');
         setTimeout(() => {
             card.remove();
-            stopFieldEffects();
+            stopFieldEffects('your');
         }, 600);
     } else {
-        stopFieldEffects();
+        stopFieldEffects('your');
     }
 }
