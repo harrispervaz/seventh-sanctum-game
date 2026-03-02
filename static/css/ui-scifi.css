@@ -1,0 +1,603 @@
+/* ═══════════════════════════════════════════════════════════════
+   THE SEVENTH SANCTUM - SCI-FI UI SYSTEM
+   Phase 1: Stats & Info Displays
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ PLAYER STAT PANELS (Top & Bottom)                           │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.stat-panel {
+    position: fixed;
+    left: 20px;
+    right: 320px; /* Account for log sidebar */
+    height: 100px;
+    background: linear-gradient(135deg, 
+        rgba(20, 25, 45, 0.95) 0%, 
+        rgba(15, 20, 35, 0.98) 100%);
+    border: 2px solid rgba(100, 150, 255, 0.3);
+    border-radius: 12px;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(50, 100, 200, 0.2);
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.stat-panel-opponent {
+    top: 20px;
+}
+
+.stat-panel-player {
+    bottom: 20px;
+}
+
+/* Active turn glow effect */
+.stat-panel.active-turn {
+    border-color: rgba(100, 200, 255, 0.8);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 60px rgba(100, 200, 255, 0.6),
+        0 0 100px rgba(100, 200, 255, 0.3);
+    animation: activeTurnPulse 2s ease-in-out infinite;
+}
+
+@keyframes activeTurnPulse {
+    0%, 100% { 
+        box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 0 60px rgba(100, 200, 255, 0.6),
+            0 0 100px rgba(100, 200, 255, 0.3);
+    }
+    50% { 
+        box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 0 80px rgba(100, 200, 255, 0.8),
+            0 0 120px rgba(100, 200, 255, 0.5);
+    }
+}
+
+/* AI thinking state */
+.stat-panel.ai-thinking {
+    opacity: 0.7;
+    border-color: rgba(100, 150, 255, 0.2);
+}
+
+.stat-panel.ai-thinking::after {
+    content: 'AI THINKING...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: rgba(100, 200, 255, 0.8);
+    text-shadow: 0 0 10px rgba(100, 200, 255, 0.6);
+    animation: aiThinkingPulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes aiThinkingPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ PLAYER NAMEPLATE                                             │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.player-nameplate {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.player-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.player-faction {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Faction colors */
+.faction-miasma { color: #9b59b6; }
+.faction-skyforge { color: #3498db; }
+.faction-rustfields { color: #e67e22; }
+.faction-generic { color: #95a5a6; }
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ ENERGY ORBS DISPLAY                                          │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.energy-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.energy-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.energy-orbs {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.energy-orb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* Empty orb (unavailable) */
+.energy-orb.empty {
+    background: radial-gradient(circle at 30% 30%, 
+        rgba(60, 60, 70, 0.8) 0%, 
+        rgba(30, 30, 40, 0.9) 100%);
+    border: 2px solid rgba(80, 80, 90, 0.5);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Available orb (can spend) */
+.energy-orb.available {
+    background: radial-gradient(circle at 30% 30%, 
+        rgba(255, 220, 50, 1) 0%,
+        rgba(255, 180, 0, 0.9) 50%,
+        rgba(200, 140, 0, 0.8) 100%);
+    border: 2px solid rgba(255, 200, 50, 0.8);
+    box-shadow: 
+        0 0 15px rgba(255, 200, 50, 0.8),
+        0 0 25px rgba(255, 180, 0, 0.5),
+        inset 0 2px 8px rgba(255, 255, 255, 0.4);
+    animation: energyGlow 2s ease-in-out infinite;
+}
+
+/* Used orb (spent this turn) */
+.energy-orb.used {
+    background: radial-gradient(circle at 30% 30%, 
+        rgba(100, 100, 110, 0.6) 0%, 
+        rgba(60, 60, 70, 0.7) 100%);
+    border: 2px solid rgba(120, 120, 130, 0.4);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.6),
+        0 1px 2px rgba(0, 0, 0, 0.4);
+    animation: usedPulse 1s ease-out;
+}
+
+@keyframes energyGlow {
+    0%, 100% { 
+        box-shadow: 
+            0 0 15px rgba(255, 200, 50, 0.8),
+            0 0 25px rgba(255, 180, 0, 0.5),
+            inset 0 2px 8px rgba(255, 255, 255, 0.4);
+    }
+    50% { 
+        box-shadow: 
+            0 0 20px rgba(255, 200, 50, 1),
+            0 0 35px rgba(255, 180, 0, 0.7),
+            inset 0 2px 10px rgba(255, 255, 255, 0.6);
+    }
+}
+
+@keyframes usedPulse {
+    0% { 
+        transform: scale(1); 
+        opacity: 1; 
+    }
+    50% { 
+        transform: scale(0.8); 
+        opacity: 0.5; 
+    }
+    100% { 
+        transform: scale(1); 
+        opacity: 1; 
+    }
+}
+
+/* Gain energy animation */
+@keyframes gainEnergy {
+    0% { 
+        transform: scale(0.5); 
+        opacity: 0; 
+    }
+    50% { 
+        transform: scale(1.3); 
+    }
+    100% { 
+        transform: scale(1); 
+        opacity: 1; 
+    }
+}
+
+.energy-orb.gaining {
+    animation: gainEnergy 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Max energy special effect */
+.energy-orbs.max-energy .energy-orb.available {
+    animation: energyGlow 1.5s ease-in-out infinite, maxEnergyVibrate 0.2s ease-in-out infinite;
+}
+
+@keyframes maxEnergyVibrate {
+    0%, 100% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-1px) scale(1.05); }
+    75% { transform: translateY(1px) scale(0.95); }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ REACTOR GAUGE (Control Loss Counter)                        │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.reactor-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.reactor-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.reactor-container {
+    position: relative;
+    width: 70px;
+    height: 70px;
+}
+
+/* Reactor circle background */
+.reactor-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at center, 
+        rgba(20, 25, 35, 0.9) 0%, 
+        rgba(10, 15, 25, 0.95) 100%);
+    border: 3px solid rgba(80, 90, 110, 0.5);
+    box-shadow: 
+        inset 0 0 20px rgba(0, 0, 0, 0.8),
+        0 2px 8px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* Reactor fill (represents control loss) */
+.reactor-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    background: linear-gradient(to top, 
+        rgba(50, 200, 50, 0.8) 0%,
+        rgba(50, 200, 50, 0.6) 100%);
+    transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                background 0.3s ease;
+    border-radius: 0 0 50% 50%;
+}
+
+/* Reactor states based on control loss */
+.reactor-fill.danger-low {
+    background: linear-gradient(to top, 
+        rgba(50, 200, 50, 0.8) 0%,
+        rgba(50, 200, 50, 0.6) 100%);
+}
+
+.reactor-fill.danger-medium {
+    background: linear-gradient(to top, 
+        rgba(255, 180, 0, 0.8) 0%,
+        rgba(255, 180, 0, 0.6) 100%);
+}
+
+.reactor-fill.danger-high {
+    background: linear-gradient(to top, 
+        rgba(255, 50, 50, 0.9) 0%,
+        rgba(255, 50, 50, 0.7) 100%);
+    animation: reactorCritical 1s ease-in-out infinite;
+}
+
+@keyframes reactorCritical {
+    0%, 100% { 
+        opacity: 1; 
+        box-shadow: 0 0 20px rgba(255, 50, 50, 0.8);
+    }
+    50% { 
+        opacity: 0.7; 
+        box-shadow: 0 0 40px rgba(255, 50, 50, 1);
+    }
+}
+
+/* Reactor counter text */
+.reactor-counter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 
+        0 0 8px rgba(0, 0, 0, 0.9),
+        0 0 15px rgba(100, 200, 255, 0.6);
+    z-index: 2;
+}
+
+/* Crack overlay for critical state */
+.reactor-cracks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    background: 
+        linear-gradient(45deg, transparent 40%, rgba(255, 50, 50, 0.3) 42%, transparent 44%),
+        linear-gradient(-45deg, transparent 40%, rgba(255, 50, 50, 0.3) 42%, transparent 44%),
+        linear-gradient(135deg, transparent 40%, rgba(255, 50, 50, 0.3) 42%, transparent 44%);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.reactor-fill.danger-high ~ .reactor-cracks {
+    opacity: 1;
+    animation: cracksFlicker 0.5s ease-in-out infinite;
+}
+
+@keyframes cracksFlicker {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ PHASE INDICATOR (Center Top)                                │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.phase-indicator {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, 
+        rgba(20, 25, 45, 0.95) 0%, 
+        rgba(15, 20, 35, 0.98) 100%);
+    border: 3px solid rgba(100, 150, 255, 0.5);
+    border-radius: 16px;
+    padding: 15px 40px;
+    box-shadow: 
+        0 4px 25px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 50px rgba(100, 150, 255, 0.3);
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(10px);
+}
+
+.phase-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 8px currentColor);
+    transition: all 0.3s ease;
+}
+
+.phase-text {
+    font-size: 28px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.9),
+        0 0 20px currentColor;
+    transition: all 0.3s ease;
+}
+
+/* Phase-specific colors */
+.phase-indicator.phase-deploy {
+    border-color: rgba(100, 200, 255, 0.8);
+    box-shadow: 
+        0 4px 25px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 50px rgba(100, 200, 255, 0.6);
+    animation: phasePulse 3s ease-in-out infinite;
+}
+
+.phase-indicator.phase-deploy .phase-icon,
+.phase-indicator.phase-deploy .phase-text {
+    color: #64c8ff;
+}
+
+.phase-indicator.phase-combat {
+    border-color: rgba(255, 100, 100, 0.8);
+    box-shadow: 
+        0 4px 25px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 50px rgba(255, 100, 100, 0.6);
+    animation: phasePulse 2s ease-in-out infinite;
+}
+
+.phase-indicator.phase-combat .phase-icon,
+.phase-indicator.phase-combat .phase-text {
+    color: #ff6464;
+}
+
+.phase-indicator.phase-end {
+    border-color: rgba(180, 100, 255, 0.8);
+    box-shadow: 
+        0 4px 25px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 50px rgba(180, 100, 255, 0.6);
+    animation: phasePulse 3s ease-in-out infinite;
+}
+
+.phase-indicator.phase-end .phase-icon,
+.phase-indicator.phase-end .phase-text {
+    color: #b464ff;
+}
+
+@keyframes phasePulse {
+    0%, 100% { 
+        transform: translateX(-50%) scale(1); 
+    }
+    50% { 
+        transform: translateX(-50%) scale(1.05); 
+    }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ TURN COUNTER                                                 │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.turn-counter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.turn-number {
+    font-size: 24px;
+    color: #64c8ff;
+    text-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.9),
+        0 0 15px rgba(100, 200, 255, 0.6);
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ DECK & HAND COUNTERS                                         │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.stat-counters {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.stat-counter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-counter-icon {
+    font-size: 20px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.stat-counter-value {
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ ACTION NOTIFICATIONS (Floating Text)                         │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.action-notification {
+    position: fixed;
+    font-size: 24px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 2000;
+    animation: floatUpFade 2s ease-out forwards;
+    text-shadow: 
+        0 0 10px currentColor,
+        0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.notification-energy-gain {
+    color: #ffd700;
+    text-shadow: 
+        0 0 15px rgba(255, 215, 0, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-energy-spend {
+    color: #888;
+    text-shadow: 
+        0 0 10px rgba(136, 136, 136, 0.6),
+        0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.notification-card-draw {
+    color: #64c8ff;
+    text-shadow: 
+        0 0 15px rgba(100, 200, 255, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-control-loss {
+    color: #ff6464;
+    font-size: 32px;
+    text-shadow: 
+        0 0 20px rgba(255, 100, 100, 1),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-card-play {
+    color: #64ff64;
+    text-shadow: 
+        0 0 15px rgba(100, 255, 100, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes floatUpFade {
+    0% {
+        transform: translateY(0) scale(0.8);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1.2);
+    }
+    100% {
+        transform: translateY(-100px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Screen shake for critical events */
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10%, 30%, 50%, 70%, 90% { transform: translate(-3px, 3px); }
+    20%, 40%, 60%, 80% { transform: translate(3px, -3px); }
+}
+
+.screen-shake {
+    animation: screenShake 0.5s ease-in-out;
+}
