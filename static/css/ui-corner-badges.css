@@ -1,0 +1,465 @@
+/* ═══════════════════════════════════════════════════════════════
+   THE SEVENTH SANCTUM - CORNER BADGE UI SYSTEM
+   Clean, minimal, doesn't cover anything!
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ PLAYER CORNER BADGES (Top-Left & Bottom-Left)               │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.corner-badge {
+    position: fixed;
+    left: 15px;
+    background: linear-gradient(135deg, 
+        rgba(20, 25, 45, 0.93) 0%, 
+        rgba(15, 20, 35, 0.95) 100%);
+    border: 2px solid rgba(100, 150, 255, 0.4);
+    border-radius: 10px;
+    padding: 10px 15px;
+    box-shadow: 
+        0 3px 15px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 30px rgba(50, 100, 200, 0.2);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    transition: all 0.3s ease;
+    min-width: 180px;
+}
+
+.corner-badge-opponent {
+    top: 15px;
+}
+
+.corner-badge-player {
+    bottom: 15px;
+}
+
+/* Active turn glow */
+.corner-badge.active-turn {
+    border-color: rgba(100, 200, 255, 0.8);
+    box-shadow: 
+        0 3px 15px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(100, 200, 255, 0.5);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { 
+        box-shadow: 
+            0 3px 15px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 0 40px rgba(100, 200, 255, 0.5);
+    }
+    50% { 
+        box-shadow: 
+            0 3px 15px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 0 60px rgba(100, 200, 255, 0.7);
+    }
+}
+
+/* AI thinking overlay */
+.corner-badge.ai-thinking::after {
+    content: 'THINKING...';
+    position: absolute;
+    top: 3px;
+    right: 8px;
+    font-size: 9px;
+    font-weight: bold;
+    color: rgba(100, 200, 255, 0.7);
+    text-shadow: 0 0 8px rgba(100, 200, 255, 0.5);
+    animation: thinkingBlink 1s ease-in-out infinite;
+}
+
+@keyframes thinkingBlink {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* Badge content layout */
+.badge-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.badge-player-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge-faction {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Faction colors */
+.faction-miasma { color: #9b59b6; }
+.faction-skyforge { color: #3498db; }
+.faction-rustfields { color: #e67e22; }
+.faction-generic { color: #95a5a6; }
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ ENERGY DISPLAY (Lightning Bolts)                            │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.badge-energy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+}
+
+.energy-label-small {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 2px;
+}
+
+.lightning-container {
+    display: flex;
+    gap: 2px;
+}
+
+.lightning-bolt {
+    font-size: 16px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+/* Available energy - glowing yellow */
+.lightning-bolt.available {
+    color: #ffd700;
+    text-shadow: 
+        0 0 8px rgba(255, 215, 0, 0.8),
+        0 0 12px rgba(255, 215, 0, 0.5);
+    animation: lightningGlow 2s ease-in-out infinite;
+}
+
+/* Empty energy - dim gray */
+.lightning-bolt.empty {
+    color: rgba(100, 100, 110, 0.4);
+    text-shadow: none;
+}
+
+/* Recently used - pulsing */
+.lightning-bolt.used {
+    color: rgba(150, 150, 160, 0.5);
+    animation: usedFlash 0.6s ease-out;
+}
+
+@keyframes lightningGlow {
+    0%, 100% { 
+        text-shadow: 
+            0 0 8px rgba(255, 215, 0, 0.8),
+            0 0 12px rgba(255, 215, 0, 0.5);
+    }
+    50% { 
+        text-shadow: 
+            0 0 12px rgba(255, 215, 0, 1),
+            0 0 18px rgba(255, 215, 0, 0.7);
+    }
+}
+
+@keyframes usedFlash {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Gaining energy animation */
+.lightning-bolt.gaining {
+    animation: gainFlash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes gainFlash {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ TURN LOSS COUNTER                                            │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.badge-turn-loss {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.turn-loss-icon {
+    font-size: 16px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.turn-loss-text {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.turn-loss-value {
+    color: #fff;
+    font-size: 14px;
+}
+
+/* Danger states */
+.badge-turn-loss.danger-safe {
+    color: #6db465;
+}
+
+.badge-turn-loss.danger-warning {
+    color: #f39c12;
+    text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+}
+
+.badge-turn-loss.danger-critical {
+    color: #e74c3c;
+    text-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    animation: criticalPulse 1s ease-in-out infinite;
+}
+
+@keyframes criticalPulse {
+    0%, 100% { 
+        text-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    }
+    50% { 
+        text-shadow: 0 0 25px rgba(231, 76, 60, 1);
+    }
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ PHASE INDICATOR (Top-Center, Compact)                       │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.phase-indicator-compact {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, 
+        rgba(20, 25, 45, 0.92) 0%, 
+        rgba(15, 20, 35, 0.95) 100%);
+    border: 2px solid rgba(100, 150, 255, 0.5);
+    border-radius: 10px;
+    padding: 8px 20px;
+    box-shadow: 
+        0 3px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(100, 150, 255, 0.3);
+    backdrop-filter: blur(8px);
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.phase-icon-compact {
+    font-size: 18px;
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+.phase-text-compact {
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.9),
+        0 0 15px currentColor;
+}
+
+/* Phase colors */
+.phase-indicator-compact.phase-deploy {
+    border-color: rgba(100, 200, 255, 0.7);
+    box-shadow: 
+        0 3px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(100, 200, 255, 0.5);
+}
+
+.phase-indicator-compact.phase-deploy .phase-icon-compact,
+.phase-indicator-compact.phase-deploy .phase-text-compact {
+    color: #64c8ff;
+}
+
+.phase-indicator-compact.phase-combat {
+    border-color: rgba(255, 100, 100, 0.7);
+    box-shadow: 
+        0 3px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(255, 100, 100, 0.5);
+}
+
+.phase-indicator-compact.phase-combat .phase-icon-compact,
+.phase-indicator-compact.phase-combat .phase-text-compact {
+    color: #ff6464;
+}
+
+.phase-indicator-compact.phase-end {
+    border-color: rgba(180, 100, 255, 0.7);
+    box-shadow: 
+        0 3px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(180, 100, 255, 0.5);
+}
+
+.phase-indicator-compact.phase-end .phase-icon-compact,
+.phase-indicator-compact.phase-end .phase-text-compact {
+    color: #b464ff;
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ TURN COUNTER (Top-Right Corner)                             │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.turn-counter-badge {
+    position: fixed;
+    top: 15px;
+    right: 330px; /* Account for log sidebar */
+    background: linear-gradient(135deg, 
+        rgba(20, 25, 45, 0.93) 0%, 
+        rgba(15, 20, 35, 0.95) 100%);
+    border: 2px solid rgba(100, 150, 255, 0.4);
+    border-radius: 10px;
+    padding: 8px 16px;
+    box-shadow: 
+        0 3px 15px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 30px rgba(50, 100, 200, 0.2);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turn-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.turn-number-large {
+    font-size: 20px;
+    font-weight: bold;
+    color: #64c8ff;
+    text-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.9),
+        0 0 12px rgba(100, 200, 255, 0.6);
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ DECK & HAND COUNTERS (Inside Badges)                        │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.badge-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.badge-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-stat-icon {
+    font-size: 13px;
+}
+
+.badge-stat-value {
+    font-weight: bold;
+    color: #fff;
+}
+
+/* ┌──────────────────────────────────────────────────────────────┐
+   │ ACTION NOTIFICATIONS (Floating Text)                         │
+   └──────────────────────────────────────────────────────────────┘ */
+
+.action-notification {
+    position: fixed;
+    font-size: 24px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 2000;
+    animation: floatUpFade 2s ease-out forwards;
+    text-shadow: 
+        0 0 10px currentColor,
+        0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.notification-energy-gain {
+    color: #ffd700;
+    text-shadow: 
+        0 0 15px rgba(255, 215, 0, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-energy-spend {
+    color: #888;
+    text-shadow: 
+        0 0 10px rgba(136, 136, 136, 0.6),
+        0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.notification-card-draw {
+    color: #64c8ff;
+    text-shadow: 
+        0 0 15px rgba(100, 200, 255, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-turn-loss {
+    color: #ff6464;
+    font-size: 32px;
+    text-shadow: 
+        0 0 20px rgba(255, 100, 100, 1),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.notification-card-play {
+    color: #64ff64;
+    text-shadow: 
+        0 0 15px rgba(100, 255, 100, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes floatUpFade {
+    0% {
+        transform: translateY(0) scale(0.8);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1.2);
+    }
+    100% {
+        transform: translateY(-100px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Screen shake for critical events */
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10%, 30%, 50%, 70%, 90% { transform: translate(-3px, 3px); }
+    20%, 40%, 60%, 80% { transform: translate(3px, -3px); }
+}
+
+.screen-shake {
+    animation: screenShake 0.5s ease-in-out;
+}
